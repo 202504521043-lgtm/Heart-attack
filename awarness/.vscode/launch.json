@@ -1,0 +1,15 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: thtt.com/fwlink/?linkid=830387ps://go.microsof
+    "version": "0.2.0",
+    "configurations": [
+
+        {
+            "type": "msedge",
+            "request": "launch",
+            "name": "Open index.html",
+            "file": "/home/mithubarman/Desktop/heart attack/awarness/index.html"
+        }
+    ]
+}

@@ -1,0 +1,299 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  StyleSheet, 
+  Text, 
+  View, 
+  TouchableOpacity, 
+  ScrollView, 
+  Alert, 
+  Linking, 
+  Animated 
+} from 'react-native';
+
+// Standard emergency services number. Change based on your target region (e.g., 911, 112).
+const EMERGENCY_NUMBER = 'emergency services';
+
+// Medical symptom checklist data based on clinical guidelines
+const SYMPTOMS = [
+  { id: 1, text: 'Chest pain, pressure, fullness, or squeezing' },
+  { id: 2, text: 'Pain radiating to jaw, neck, back, or arms' },
+  { id: 3, text: 'Shortness of breath with or without chest discomfort' },
+  { id: 4, text: 'Cold sweats, unexplained dizziness, or lightheadedness' },
+  { id: 5, text: 'Unusual fatigue, nausea, or indigestion' },
+];
+
+export default function App() {
+  const [selectedSymptoms, setSelectedSymptoms] = useState({});
+  const [isMetronomeActive, setIsMetronomeActive] = useState(false);
+  
+  // Animation value for the visual CPR pacing indicator
+  const flashAnim = useRef(new Animated.Value(1)).current;
+  const metronomeInterval = useRef(null);
+
+  // Trigger local phone dialer for immediate SOS assistance
+  const handleEmergencyCall = () => {
+    Alert.alert(
+      "CALL EMERGENCY SERVICES?",
+      `This will immediately dial ${EMERGENCY_NUMBER}.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "CALL NOW", 
+          style: "destructive", 
+          onPress: () => Linking.openURL(`tel:${EMERGENCY_NUMBER}`) 
+        }
+      ]
+    );
+  };
+
+  // Toggle symptom tracking state
+  const toggleSymptom = (id) => {
+    setSelectedSymptoms(prev => {
+      const updated = { ...prev, [id]: !prev[id] };
+      const selectedCount = Object.values(updated).filter(Boolean).length;
+      
+      // Clinical trigger: If 2 or more major symptoms are active, push a critical warning
+      if (selectedCount >= 2) {
+        Alert.alert(
+          "🚨 CRITICAL WARNING",
+          "You have selected multiple signs of a myocardial infarction (heart attack). Please press the red SOS button to call emergency services immediately.",
+          [{ text: "Understood", style: "cancel" }]
+        );
+      }
+      return updated;
+    });
+  };
+
+  // Handles the 110 BPM CPR compression pacing indicator
+  useEffect(() => {
+    if (isMetronomeActive) {
+      // 110 Beats Per Minute calculated in milliseconds: (60,000ms / 110) = ~545ms per cycle
+      const intervalMs = 545; 
+
+      metronomeInterval.current = setInterval(() => {
+        // Create an abrupt pulse effect matching recommended chest compression depths
+        Animated.sequence([
+          Animated.timing(flashAnim, { toValue: 0.2, duration: 80, useNativeDriver: true }),
+          Animated.timing(flashAnim, { toValue: 1, duration: 150, useNativeDriver: true })
+        ]).start();
+      }, intervalMs);
+    } else {
+      clearInterval(metronomeInterval.current);
+      flashAnim.setValue(1);
+    }
+
+    return () => clearInterval(metronomeInterval.current);
+  }, [isMetronomeActive]);
+
+  return (
+    <View style={styles.container}>
+      {/* HEADER */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>HeartCare Awareness</Text>
+        <Text style={styles.headerSubtitle}>Emergency Tools & Education</Text>
+      </View>
+
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
+        
+        {/* 1. EMERGENCY CALL BUTTON (STRESS-TEST DESIGNED) */}
+        <TouchableOpacity 
+          style={styles.sosButton} 
+          onPress={handleEmergencyCall}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.sosText}>⚡ SOS</Text>
+          <Text style={styles.sosSubtext}>Tap to Call {EMERGENCY_NUMBER}</Text>
+        </TouchableOpacity>
+
+        {/* 2. LIVE SYMPTOM CHECKLIST */}
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>Symptom Identification</Text>
+          <Text style={styles.sectionDesc}>Select all current sensations to evaluate risk:</Text>
+          
+          {SYMPTOMS.map((symptom) => (
+            <TouchableOpacity
+              key={symptom.id}
+              style={[
+                styles.checkboxRow,
+                selectedSymptoms[symptom.id] && styles.checkboxRowSelected
+              ]}
+              onPress={() => toggleSymptom(symptom.id)}
+            >
+              <View style={[
+                styles.checkbox,
+                selectedSymptoms[symptom.id] && styles.checkboxChecked
+              ]} />
+              <Text style={styles.checkboxText}>{symptom.text}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* 3. CPR PACING TOOL (BYSTANDER ASSISTANCE) */}
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>CPR Bystander Pace Guideline</Text>
+          <Text style={styles.sectionDesc}>
+            If a patient is unresponsive and not breathing, push hard and fast in the center of the chest to this rhythm.
+          </Text>
+
+          <Animated.View style={[styles.metronomeIndicator, { opacity: flashAnim }]} />
+
+          <TouchableOpacity 
+            style={[styles.utilityButton, isMetronomeActive && styles.utilityButtonActive]}
+            onPress={() => setIsMetronomeActive(!isMetronomeActive)}
+          >
+            <Text style={styles.utilityButtonText}>
+              {isMetronomeActive ? "⏹ STOP METRONOME" : "▶ START CPR PACE (110 BPM)"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+      </ScrollView>
+
+      {/* MEDICAL LEGAL DISCLAIMER */}
+      <View style={styles.disclaimerContainer}>
+        <Text style={styles.disclaimerText}>
+          Disclaimer: This app is for informational purposes and does not replace emergency medical response systems.
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+// STYLING SHEET OPTIMIZED FOR ACCESSIBILITY AND CONTRAST
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+  },
+  header: {
+    backgroundColor: '#111827',
+    paddingTop: 60,
+    paddingBottom: 20,
+    alignItems: 'center',
+  },
+  headerTitle: {
+    color: '#FFFFFF',
+    fontSize: 22,
+    fontWeight: 'bold',
+  },
+  headerSubtitle: {
+    color: '#9CA3AF',
+    fontSize: 14,
+    marginTop: 4,
+  },
+  scrollContainer: {
+    padding: 20,
+  },
+  sosButton: {
+    backgroundColor: '#DC2626',
+    borderRadius: 20,
+    paddingVertical: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#DC2626',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 8,
+    marginBottom: 24,
+  },
+  sosText: {
+    color: '#FFFFFF',
+    fontSize: 36,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+  sosSubtext: {
+    color: '#FEE2E2',
+    fontSize: 16,
+    fontWeight: '600',
+    marginTop: 4,
+  },
+  sectionCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 6,
+  },
+  sectionDesc: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  checkboxRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+    padding: 14,
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  checkboxRowSelected: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FCA5A5',
+    borderWidth: 1,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: '#9CA3AF',
+    marginRight: 12,
+  },
+  checkboxChecked: {
+    backgroundColor: '#DC2626',
+    borderColor: '#DC2626',
+  },
+  checkboxText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#374151',
+    fontWeight: '500',
+  },
+  metronomeIndicator: {
+    width: '100%',
+    height: 30,
+    backgroundColor: '#EF4444',
+    borderRadius: 6,
+    marginBottom: 16,
+  },
+  utilityButton: {
+    backgroundColor: '#2563EB',
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  utilityButtonActive: {
+    backgroundColor: '#1E40AF',
+  },
+  utilityButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 15,
+  },
+  disclaimerContainer: {
+    padding: 16,
+    backgroundColor: '#F3F4F6',
+    borderTopWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  disclaimerText: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    textAlign: 'center',
+    lineHeight: 16,
+  },
+});
